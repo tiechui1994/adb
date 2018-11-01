@@ -38,6 +38,11 @@ class Adb(object):
         output = process.read()
         return output
 
+    def comand(self, command):
+        process = os.popen(command)
+        output = process.read()
+        return output
+
     def test_device(self):
         print('检查设备是否连接...')
         command_list = [self.adb_path, 'devices']

@@ -7,6 +7,7 @@ import json
 import re
 from common.adb import Adb
 
+
 adb = Adb()
 
 
