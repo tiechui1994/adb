@@ -3,25 +3,25 @@ from common.env import Env
 from utils.consts import LOCKTYPE
 from utils.functions import get_points
 
+adb = Adb()
+
 
 class Screen(object):
-    adb = Adb()
-
     @classmethod
     def lock_screen(cls):
         """
         锁定屏幕
         """
-        info = cls.adb.run("shell dumpsys window policy")
+        info = adb.run("shell dumpsys window policy")
         if "mShowingLockscreen=true" in info:
             if "mScreenOnFully=false" in info:
                 # 锁定且屏幕为暗
                 return
             else:
                 # 锁定屏幕为亮
-                cls.adb.run(" shell input keyevent 82")
+                adb.run(" shell input keyevent 82")
         else:
-            cls.adb.run(" shell input keyevent 26")
+            adb.run(" shell input keyevent 26")
 
     @classmethod
     def unlock_screen(cls, password=None, lock_type=LOCKTYPE.NONE):
@@ -29,20 +29,20 @@ class Screen(object):
         屏幕解锁
         """
         # 360*1230
-        info = cls.adb.run("shell dumpsys window policy")
+        info = adb.run("shell dumpsys window policy")
         if "mShowingLockscreen=true" in info:
             if "mScreenOnFully=false" in info:
-                cls.adb.run("shell input keyevent 26")
+                adb.run("shell input keyevent 26")
 
             # 滑动
-            cls.adb.run("shell input swipe {x1} {y1} {x2} {y2} {time}".format(
+            adb.run("shell input swipe {x1} {y1} {x2} {y2} {time}".format(
                 x1=360, y1=1230,
                 x2=360, y2=600,
                 time=300
             ))
 
             # 查询当前状态(已经解锁)
-            info = cls.adb.run("shell dumpsys window policy")
+            info = adb.run("shell dumpsys window policy")
             if "mShowingLockscreen=false" in info:
                 return True
 
@@ -57,7 +57,7 @@ class Screen(object):
                 cls._unlock_screen_with_pin(password)
 
             # 再次查询当前状态
-            info = cls.adb.run("shell dumpsys window policy")
+            info = adb.run("shell dumpsys window policy")
             return "mShowingLockscreen=false" in info
         else:
             return True
@@ -142,5 +142,4 @@ adb shell sendevent {DEVICE} {EV_SYN} {SYN_REPORT} 0 && \\
 
 
 if __name__ == '__main__':
-    res = Screen.unlock_screen("32", lock_type=LOCKTYPE.PATTERN)
-    print(res)
+    pass

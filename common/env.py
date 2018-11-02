@@ -1,7 +1,13 @@
 """
 指令表
 """
+import re
+from collections import OrderedDict
+from io import StringIO
 
+from common.adb import Adb
+
+adb = Adb()
 __ENV__ = {
     "EV_SYN": 0x00,  # 同步事件
     "EN_KEY": 0x01,  # keyboard
@@ -49,18 +55,92 @@ __ENV__ = {
     "DEVICE": "/dev/input/event2"  # 需要改变
 }
 
+__EIS__ = {}
+
 
 class _Env(object):
     @property
     def ENV(self) -> dict:
         if not hasattr(_Env, '__ENV__'):
-            self.reload()
+            self.reload_env()
             _Env.__ENV__ = __ENV__
         return getattr(_Env, '__ENV__')
 
-    @staticmethod
-    def reload():
+    @property
+    def EIS(self) -> dict:
+        if not hasattr(_Env, '__EIS__'):
+            self.reload_eis()
+            _Env.__EIS__ = __EIS__
+        return getattr(_Env, '__EIS__')
+
+    def reload_env(self):
         global __ENV__
+        devices = self.get_all_device()
+        for device in devices:
+            print(device)
+            for k, v in device["events"].items():
+                if k.count("ABS"):
+                    __ENV__["DEVICE"] = device["device"]
+                    break
+
+    @staticmethod
+    def get_all_device() -> list:
+        all_devices = adb.run(' shell getevent -p')
+        reader = StringIO(all_devices)
+        colon_sep = re.compile(r"\s*:\s*")
+        space_sep = re.compile(r"\s+")
+
+        read_event, event_name, devices, device = False, "", [], OrderedDict()
+        line = reader.readline()
+        while len(line) > 0:
+            line = line.replace("\n", "").lstrip().rstrip()
+            if line.count("device") > 0:
+                if device:
+                    devices.append(device)
+                    device = OrderedDict()
+
+                read_event = False
+                device["device"] = colon_sep.split(line)[1]
+                line = reader.readline()
+                continue
+
+            if line.count("events") > 0:
+                read_event = True
+                line = reader.readline()
+                continue
+
+            if line.count("input") > 0:
+                read_event = False
+                line = reader.readline()
+                continue
+
+            if read_event:
+                fileds = colon_sep.split(line)
+                if line.count("value") > 0:
+                    fileds = fileds[0:-1]
+
+                if len(fileds) == 2:
+                    event_name = fileds[0]
+                    device["events"] = {event_name: space_sep.split(fileds[1])}
+
+                if len(fileds) == 1:
+                    device["events"][event_name] += space_sep.split(fileds[0])
+
+                line = reader.readline()
+                continue
+
+            line = reader.readline()
+
+        if device:
+            devices.append(device)
+
+        return devices
+
+    @staticmethod
+    def reload_eis():
+        device_name = adb.get_device_name()
+        print(device_name)
+        pass
 
 
 Env = _Env()
@@ -118,11 +198,11 @@ if __name__ == '__main__':
     for s in strs:
         if len(s.replace(":", "").lstrip(" ")) == 0:
             continue
-        line = s.replace(":", "").lstrip(" ").split(" ")
-        line[1] = str(int('0x' + line[1], 16))
-        line[2] = str(int('0x' + line[2], 16))
-        line[3] = str(int('0x' + line[3], 16))
+        ln = s.replace(":", "").lstrip(" ").split(" ")
+        ln[1] = str(int('0x' + ln[1], 16))
+        ln[2] = str(int('0x' + ln[2], 16))
+        ln[3] = str(int('0x' + ln[3], 16))
 
-        res = res + "adb shell sendevent " + " ".join(line) + " && \\\n"
+        res = res + "adb shell sendevent " + " ".join(ln) + " && \\\n"
 
-    print(res.rstrip('&'))
+    x = Env.ENV
