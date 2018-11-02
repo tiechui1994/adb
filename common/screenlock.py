@@ -1,5 +1,7 @@
 from common.adb import Adb
 from common.env import ENV
+from utils.consts import LOCKTYPE
+from utils.functions import get_points
 
 
 class Screen(object):
@@ -22,7 +24,7 @@ class Screen(object):
             cls.adb.run(" shell input keyevent 26")
 
     @classmethod
-    def unlock_screen(cls, password=None):
+    def unlock_screen(cls, password=None, lock_type=LOCKTYPE.NONE):
         """
         屏幕解锁
         """
@@ -39,47 +41,59 @@ class Screen(object):
                 time=300
             ))
 
-            # 查询当前状态
+            # 查询当前状态(已经解锁)
             info = cls.adb.run("shell dumpsys window policy")
             if "mShowingLockscreen=false" in info:
                 return True
 
-            if password is None:
+            # 未解锁时, lock_type 或者 password 判断
+            if lock_type != LOCKTYPE.NONE or password is None:
                 return False
 
-            # vivo y67密码表
-            table_password = {
-                '1': {'x': 150, 'y': 676},
-                '2': {'x': 360, 'y': 676},
-                '3': {'x': 570, 'y': 676},
-                '4': {'x': 150, 'y': 886},
-                '5': {'x': 360, 'y': 886},
-                '6': {'x': 570, 'y': 886},
-                '7': {'x': 150, 'y': 1096},
-                '8': {'x': 360, 'y': 1096},
-                '9': {'x': 570, 'y': 1096}
-            }
+            # 针对有密码的解锁
+            if lock_type == LOCKTYPE.PATTERN:
+                cls._unlock_screen_with_pattern(password)
+            elif lock_type == LOCKTYPE.PIN:
+                cls._unlock_screen_with_pin(password)
 
-            length = len(password)
-            command = cls._start()
-            for i in range(1, length):
-                point1 = table_password[password[i - 1]]
-                point2 = table_password[password[i]]
-                points = cls._get_ten_points(point1.get('x'), point1.get('y'), point2.get('x'), point2.get('y'))
-
-                if len(points) == 0:
-                    return False
-                for point in points:
-                    command += cls._click(point[0], point[1])
-            command += cls._end()
-            print(command)
-
-            # 查询当前状态
+            # 再次查询当前状态
             info = cls.adb.run("shell dumpsys window policy")
-            if "mShowingLockscreen=false" in info:
-                return True
-            else:
+            return "mShowingLockscreen=false" in info
+        else:
+            return True
+
+    @classmethod
+    def _unlock_screen_with_pin(cls, password):
+        pass
+
+    @classmethod
+    def _unlock_screen_with_pattern(cls, password):
+        # vivo y67密码表
+        table_password = {
+            '1': {'x': 150, 'y': 676},
+            '2': {'x': 360, 'y': 676},
+            '3': {'x': 570, 'y': 676},
+            '4': {'x': 150, 'y': 886},
+            '5': {'x': 360, 'y': 886},
+            '6': {'x': 570, 'y': 886},
+            '7': {'x': 150, 'y': 1096},
+            '8': {'x': 360, 'y': 1096},
+            '9': {'x': 570, 'y': 1096}
+        }
+
+        length = len(password)
+        command = cls._start()
+        for i in range(1, length):
+            point1 = table_password[password[i - 1]]
+            point2 = table_password[password[i]]
+            points = get_points(point1.get('x'), point1.get('y'), point2.get('x'), point2.get('y'))
+
+            if len(points) == 0:
                 return False
+            for point in points:
+                command += cls._click(point[0], point[1])
+        command += cls._end()
+        print(command)
 
     @staticmethod
     def _start():
@@ -126,32 +140,6 @@ adb shell sendevent {DEVICE} {EV_SYN} {SYN_REPORT} 0 && \\
 """
         return template.format(x=x, y=y, m=6, p=6, **ENV)
 
-    @staticmethod
-    def _get_ten_points(x1, y1, x2, y2):
-        points = []
-        if x1 == x2 and y1 == y2:
-            return points
-
-        if x1 == x2:
-            for i in range(2, 12, 2):
-                points.append((x1, y1 + (y2 - y1) / 20 * i))
-            return points
-
-        if y1 == y2:
-            for i in range(1, 20, 2):
-                points.append((x1 + (x2 - x1) / 20 * i, y1))
-            return points
-
-        step = (x2 - x1) / 20
-        k = (y2 - y1) / (x2 - x1)
-        b = y1 - k * x1
-        for i in range(1, 20, 2):
-            x = x1 + i * step
-            y = k * x + b
-            points.append((x, y))
-
-        return points
-
 
 if __name__ == '__main__':
-    Screen.unlock_screen("3586")
+    Screen.unlock_screen("1357")

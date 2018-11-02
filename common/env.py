@@ -1,3 +1,7 @@
+"""
+指令表
+"""
+
 ENV = {
     "EV_SYN": 0x00,  # 同步事件
     "EN_KEY": 0x01,  # keyboard

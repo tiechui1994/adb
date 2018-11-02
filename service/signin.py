@@ -4,6 +4,7 @@ import sys
 
 from common import screenshot
 from common.adb import Adb
+from common.screenlock import Screen
 
 APP_MAIN = "com.facishare.fs/com.facishare.fs.biz_function.subbiz_attendance_new.AttendanceActivity"
 
@@ -11,12 +12,8 @@ APP_MAIN = "com.facishare.fs/com.facishare.fs.biz_function.subbiz_attendance_new
 def schedule_job():
     adb = Adb()
 
-    # 手机屏幕唤醒
-    state = adb.run("shell dumpsys window policy")
-    if 'mShowingLockscreen=true' in state:
-        if 'mScreenOnFully=false' in state:
-            adb.run('shell input keyevent 26')
-        adb.run('shell input swipe 540 1200 540 100 800')
+    # 解锁
+    Screen.unlock_screen()
 
     # 启动应用
     window_info = adb.run("shell dumpsys window|grep mCurrentFocus")
@@ -52,4 +49,4 @@ def execute():
 
 
 if __name__ == '__main__':
-    execute()
+    schedule_job()
