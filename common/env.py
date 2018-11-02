@@ -162,6 +162,9 @@ class _Env(object):
 
     @staticmethod
     def reload_eis():
+        """
+        一条完整的指令: 准备 -> 动作 -> 结束
+        """
         device_name = adb.get_device_name()
         print(device_name)
         pass
@@ -229,4 +232,4 @@ if __name__ == '__main__':
 
         res = res + "adb shell sendevent " + " ".join(ln) + " && \\\n"
 
-    x = Env.ENV
+    x = Env.EIS
