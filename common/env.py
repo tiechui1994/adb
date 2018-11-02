@@ -77,40 +77,52 @@ class _Env(object):
         global __ENV__
         devices = self.get_all_device()
         for device in devices:
-            print(device)
-            for k, v in device["events"].items():
-                if k.count("ABS"):
-                    __ENV__["DEVICE"] = device["device"]
-                    break
+            # INPUT_PROP_DIRECT是监听指令的标志
+            if device["input"] is "INPUT_PROP_DIRECT":
+                __ENV__["DEVICE"] = device["device"]
+
+        print(__ENV__["DEVICE"])
 
     @staticmethod
     def get_all_device() -> list:
+        """
+        device detail:
+        {
+            'device' : '/dev/input/event4',
+            'events' : {
+                'SW  (0005)': ['0002', '0004', '0006', '000e', '000f', '0010']
+            },
+            'input': None
+        }
+        """
         all_devices = adb.run(' shell getevent -p')
         reader = StringIO(all_devices)
         colon_sep = re.compile(r"\s*:\s*")
         space_sep = re.compile(r"\s+")
 
-        read_event, event_name, devices, device = False, "", [], OrderedDict()
+        read_event, read_input, event_name, devices, device = False, False, "", [], OrderedDict()
         line = reader.readline()
         while len(line) > 0:
             line = line.replace("\n", "").lstrip().rstrip()
-            if line.count("device") > 0:
+            if line.count("device"):
                 if device:
                     devices.append(device)
                     device = OrderedDict()
 
                 read_event = False
+                read_input = False
                 device["device"] = colon_sep.split(line)[1]
                 line = reader.readline()
                 continue
 
-            if line.count("events") > 0:
+            if line.count("events"):
                 read_event = True
                 line = reader.readline()
                 continue
 
-            if line.count("input") > 0:
+            if line.count("input"):
                 read_event = False
+                read_input = True
                 line = reader.readline()
                 continue
 
@@ -134,6 +146,12 @@ class _Env(object):
 
                 line = reader.readline()
                 continue
+
+            if read_input:
+                if line.count("none"):
+                    device["input"] = None
+                else:
+                    device["input"] = line
 
             line = reader.readline()
 
