@@ -121,7 +121,13 @@ class _Env(object):
 
                 if len(fileds) == 2:
                     event_name = fileds[0]
-                    device["events"] = {event_name: space_sep.split(fileds[1])}
+                    if not device.get("events", None):
+                        events = dict()
+                    else:
+                        events = device["events"]
+
+                    events[event_name] = space_sep.split(fileds[1])
+                    device["events"] = events
 
                 if len(fileds) == 1:
                     device["events"][event_name] += space_sep.split(fileds[0])
