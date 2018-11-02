@@ -1,5 +1,5 @@
 from common.adb import Adb
-from common.env import ENV
+from common.env import Env
 from utils.consts import LOCKTYPE
 from utils.functions import get_points
 
@@ -47,7 +47,7 @@ class Screen(object):
                 return True
 
             # 未解锁时, lock_type 或者 password 判断
-            if lock_type != LOCKTYPE.NONE or password is None:
+            if lock_type == LOCKTYPE.NONE or lock_type != LOCKTYPE.NONE and password is None:
                 return False
 
             # 针对有密码的解锁
@@ -105,7 +105,7 @@ class Screen(object):
 adb shell sendevent {DEVICE} {EN_KEY} {BTN_TOUCH} {DOWN} && \\
 adb shell sendevent {DEVICE} {EN_KEY} {BTN_TOOL_FINGER} {DOWN} && \\
 adb shell sendevent {DEVICE} {EV_ABS} {ABS_MT_TRACKING_ID} 0 && \\
-""".format(**ENV)
+""".format(**Env.ENV)
         return template
 
     @staticmethod
@@ -120,7 +120,7 @@ adb shell sendevent {DEVICE} {EV_SYN} {SYN_REPORT} 0 && \\
 adb shell sendevent {DEVICE} {EN_KEY} {BTN_TOUCH} {UP} && \\
 adb shell sendevent {DEVICE} {EV_SYN} {BTN_TOOL_FINGER} {UP} && \\
 adb shell sendevent {DEVICE} {EV_SYN} {SYN_REPORT} 0
-        """.format(**ENV)
+        """.format(**Env.ENV)
 
         return template
 
@@ -138,8 +138,9 @@ adb shell sendevent {DEVICE} {EV_ABS} {ABS_MT_TOUCH_MAJOR} {m} && \\
 adb shell sendevent {DEVICE} {EV_SYN} {BTN_TOOL_FINGER} {p} && \\
 adb shell sendevent {DEVICE} {EV_SYN} {SYN_REPORT} 0 && \\
 """
-        return template.format(x=x, y=y, m=6, p=6, **ENV)
+        return template.format(x=x, y=y, m=6, p=6, **Env.ENV)
 
 
 if __name__ == '__main__':
-    Screen.unlock_screen("1357")
+    res = Screen.unlock_screen("32", lock_type=LOCKTYPE.PATTERN)
+    print(res)

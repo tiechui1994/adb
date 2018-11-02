@@ -2,7 +2,7 @@
 指令表
 """
 
-ENV = {
+__ENV__ = {
     "EV_SYN": 0x00,  # 同步事件
     "EN_KEY": 0x01,  # keyboard
     "EV_REL": 0x02,  # 相对坐标
@@ -46,8 +46,24 @@ ENV = {
     "UP": 0,  # EN_KEY的value
     "DOWN": 1,
 
-    "DEVICE": "/dev/input/event15"  # 需要改变
+    "DEVICE": "/dev/input/event2"  # 需要改变
 }
+
+
+class _Env(object):
+    @property
+    def ENV(self) -> dict:
+        if not hasattr(_Env, '__ENV__'):
+            self.reload()
+            _Env.__ENV__ = __ENV__
+        return getattr(_Env, '__ENV__')
+
+    @staticmethod
+    def reload():
+        global __ENV__
+
+
+Env = _Env()
 
 if __name__ == '__main__':
     strs = """
@@ -102,11 +118,11 @@ if __name__ == '__main__':
     for s in strs:
         if len(s.replace(":", "").lstrip(" ")) == 0:
             continue
-    line = s.replace(":", "").lstrip(" ").split(" ")
-    line[1] = str(int('0x' + line[1], 16))
-    line[2] = str(int('0x' + line[2], 16))
-    line[3] = str(int('0x' + line[3], 16))
+        line = s.replace(":", "").lstrip(" ").split(" ")
+        line[1] = str(int('0x' + line[1], 16))
+        line[2] = str(int('0x' + line[2], 16))
+        line[3] = str(int('0x' + line[3], 16))
 
-    res = res + "adb shell sendevent " + " ".join(line) + " && \\\n"
+        res = res + "adb shell sendevent " + " ".join(line) + " && \\\n"
 
     print(res.rstrip('&'))

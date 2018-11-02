@@ -32,6 +32,14 @@ class Adb(object):
             return m.group(1), m.group(2)
         return 1080, 1920
 
+    def get_device_name(self):
+        """
+        返回设备名称
+        """
+        process = os.popen(self.adb_path + ' shell getprop ro.product.model')
+        output = process.read()
+        return str(output).replace(' ', '_')
+
     def run(self, raw_command):
         command = '{} {}'.format(self.adb_path, raw_command)
         process = os.popen(command)
