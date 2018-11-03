@@ -32,19 +32,41 @@ class Adb(object):
             return m.group(1), m.group(2)
         return 1080, 1920
 
-    def get_device_name(self):
+    def get_device_info(self) -> dict:
         """
-        返回设备名称
+        返回设备的信息
         """
-        process = os.popen(self.adb_path + ' shell getprop ro.product.model')
+        command = """
+        {adb} shell getprop ro.boot.serialno && \\
+        {adb} shell getprop ro.build.version.release && \\
+        {adb} shell getprop ro.build.version.sdk && \\
+        {adb} shell getprop ro.product.brand && \\
+        {adb} shell getprop ro.product.model
+        """.format(adb=self.adb_path)
+        process = os.popen(command)
         output = process.read()
-        return str(output).replace(' ', '_')
+        info = str(output).split("\n")
+        return {
+            'serialno': info[0],
+            'release': info[1],
+            'sdk': info[2],
+            'brand': info[3],
+            'model': info[4]
+        }
 
     def run(self, raw_command):
         command = '{} {}'.format(self.adb_path, raw_command)
         process = os.popen(command)
         output = process.read()
         return output
+
+    def get_density(self):
+        process = os.popen(self.adb_path + ' shell wm density')
+        output = process.read()
+        return output
+
+    def adb_path(self):
+        return self.adb_path
 
     def test_device(self):
         print('检查设备是否连接...')
@@ -61,21 +83,3 @@ class Adb(object):
         print('adb 输出:')
         for each in output:
             print(each.decode('utf8'))
-
-    def test_density(self):
-        process = os.popen(self.adb_path + ' shell wm density')
-        output = process.read()
-        return output
-
-    def test_device_detail(self):
-        process = os.popen(self.adb_path + ' shell getprop ro.product.device')
-        output = process.read()
-        return output
-
-    def test_device_os(self):
-        process = os.popen(self.adb_path + ' shell getprop ro.build.version.release')
-        output = process.read()
-        return output
-
-    def adb_path(self):
-        return self.adb_path

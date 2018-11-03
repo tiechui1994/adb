@@ -8,6 +8,7 @@ from io import StringIO
 from common.adb import Adb
 
 adb = Adb()
+
 __ENV__ = {
     "EV_SYN": 0x00,  # 同步事件
     "EN_KEY": 0x01,  # keyboard
@@ -165,7 +166,7 @@ class _Env(object):
         """
         一条完整的指令: 准备 -> 动作 -> 结束
         """
-        device_name = adb.get_device_name()
+        device_name = adb.get_device_info()
         print(device_name)
         pass
 
