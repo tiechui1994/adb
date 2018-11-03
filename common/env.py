@@ -175,14 +175,42 @@ class _Env(object):
 
         return devices
 
-    @staticmethod
-    def reload_eis():
+    def reload_eis(self):
         """
         一条完整的指令: 准备 -> 动作 -> 结束
         """
         device_name = adb.get_device_info()
         print(device_name)
-        pass
+        self.get_eis("")
+
+    def get_eis(self, event, count=100, message="") -> list:
+        try:
+            print(message)
+            eis_bytes = adb.run('shell getevent -l -c {count} | grep {event}'.
+                                format(count=count, event=event))
+
+            re_first = re.compile(r"^/dev/input/event.*")
+            re_last = re.compile(r".*EV_ABS\s+ABS_MT_TRACKING_ID\s+ffffffff$")
+
+            all_eis = str(eis_bytes).split("\n")
+            first, last, length = 0, 0, len(all_eis)
+            for index in range(0, length):
+                f = all_eis[index].strip(" ")
+                l = all_eis[length - index - 1].strip()
+                if first is 0 and re_first.match(f):
+                    first = index + 1
+
+                if last is 0 and re_last.match(l):
+                    last = length - index
+
+                all_eis[index] = f
+
+            if last != 0 and first != 0:
+                return all_eis[first:last]
+            else:
+                self.get_eis(event, count, message)
+        except Exception:
+            pass
 
 
 Env = _Env()
@@ -216,5 +244,4 @@ if __name__ == '__main__':
 
         res = res + "adb shell sendevent " + " ".join(ln) + " && \\\n"
 
-    print(res)
-    x = Env.ENV
+    Env.get_eis('event2', count=40, message="请点击:")
