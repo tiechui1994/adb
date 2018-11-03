@@ -1,3 +1,5 @@
+import os
+
 from common.adb import Adb
 from common.env import Env
 from utils.consts import LOCKTYPE
@@ -93,7 +95,7 @@ class Screen(object):
             for point in points:
                 command += cls._click(point[0], point[1])
         command += cls._end()
-        print(command)
+        os.popen(command)
 
     @staticmethod
     def _start():
@@ -118,7 +120,7 @@ adb shell sendevent {DEVICE} {EV_ABS} {ABS_MT_TRACKING_ID} 0 && \\
         template = """adb shell sendevent {DEVICE} {EV_ABS} {ABS_MT_TRACKING_ID} 4294967295 && \\
 adb shell sendevent {DEVICE} {EV_SYN} {SYN_REPORT} 0 && \\
 adb shell sendevent {DEVICE} {EN_KEY} {BTN_TOUCH} {UP} && \\
-adb shell sendevent {DEVICE} {EV_SYN} {BTN_TOOL_FINGER} {UP} && \\
+adb shell sendevent {DEVICE} {EN_KEY} {BTN_TOOL_FINGER} {UP} && \\
 adb shell sendevent {DEVICE} {EV_SYN} {SYN_REPORT} 0
         """.format(**Env.ENV)
 
@@ -135,11 +137,11 @@ adb shell sendevent {DEVICE} {EV_SYN} {SYN_REPORT} 0
         template = """adb shell sendevent {DEVICE} {EV_ABS} {ABS_MT_POSITION_X} {x} && \\
 adb shell sendevent {DEVICE} {EV_ABS} {ABS_MT_POSITION_Y} {y} && \\
 adb shell sendevent {DEVICE} {EV_ABS} {ABS_MT_TOUCH_MAJOR} {m} && \\
-adb shell sendevent {DEVICE} {EV_SYN} {BTN_TOOL_FINGER} {p} && \\
+adb shell sendevent {DEVICE} {EV_ABS} {BTN_TOOL_FINGER} {p} && \\
 adb shell sendevent {DEVICE} {EV_SYN} {SYN_REPORT} 0 && \\
 """
         return template.format(x=x, y=y, m=6, p=6, **Env.ENV)
 
 
 if __name__ == '__main__':
-    pass
+    Screen.unlock_screen("3586", lock_type=LOCKTYPE.PATTERN)

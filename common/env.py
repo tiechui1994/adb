@@ -9,6 +9,7 @@ from common.adb import Adb
 
 adb = Adb()
 
+# 最新adb的值表, 可以进行更新
 __ENV__ = {
     "EV_SYN": 0x00,  # 同步事件
     "EN_KEY": 0x01,  # keyboard
@@ -53,7 +54,7 @@ __ENV__ = {
     "UP": 0,  # EN_KEY的value
     "DOWN": 1,
 
-    "DEVICE": "/dev/input/event2"  # 需要改变
+    "DEVICE": "/dev/input/event15"  # 需要改变
 }
 
 __EIS__ = {}
@@ -76,16 +77,25 @@ class _Env(object):
 
     def reload_env(self):
         global __ENV__
-        devices = self.get_all_device()
-        for device in devices:
+        device_values = self.get_all_device()
+        device_labels = self.get_all_device(is_label=True)
+        for index in range(0, len(device_labels)):
+            device_value = dict(device_values[index])
+            device_label = dict(device_labels[index])
+
             # INPUT_PROP_DIRECT是监听指令的标志
-            if device["input"] is "INPUT_PROP_DIRECT":
-                __ENV__["DEVICE"] = device["device"]
+            if device_label["input"] is "INPUT_PROP_DIRECT":
+                __ENV__["DEVICE"] = device_label["device"]
+
+            for key, event in device_label["events"].items():
+                for i in range(0, len(event)):
+                    if event[i] != device_value["events"][key][i]:
+                        __ENV__[event[i]] = int(device_value["events"][key][i], 16)
 
         print(__ENV__["DEVICE"])
 
     @staticmethod
-    def get_all_device() -> list:
+    def get_all_device(is_label=False) -> list:
         """
         device detail:
         {
@@ -96,7 +106,11 @@ class _Env(object):
             'input': None
         }
         """
-        all_devices = adb.run(' shell getevent -p')
+        if is_label:
+            all_devices = adb.run(' shell getevent -pl')
+        else:
+            all_devices = adb.run(' shell getevent -p')
+
         reader = StringIO(all_devices)
         colon_sep = re.compile(r"\s*:\s*")
         space_sep = re.compile(r"\s+")
@@ -178,42 +192,11 @@ if __name__ == '__main__':
         /dev/input/event15: 0001 014a 00000001
         /dev/input/event15: 0001 0145 00000001
         /dev/input/event15: 0003 0039 00000000
-
-        /dev/input/event15: 0003 0035 00000279
-        /dev/input/event15: 0003 0036 000002b1
-        /dev/input/event15: 0003 0030 00000008
-        /dev/input/event15: 0003 003a 00000008
-        /dev/input/event15: 0000 0000 00000000
-
-        /dev/input/event15: 0003 0035 00000267
-        /dev/input/event15: 0003 0036 000002b0
+        /dev/input/event15: 0003 0035 0000020d
+        /dev/input/event15: 0003 0036 000002aa
         /dev/input/event15: 0003 0030 00000007
         /dev/input/event15: 0003 003a 00000007
         /dev/input/event15: 0000 0000 00000000
-
-        /dev/input/event15: 0003 0035 0000021a
-        /dev/input/event15: 0003 0036 000002da
-        /dev/input/event15: 0003 0030 00000009
-        /dev/input/event15: 0003 003a 00000009
-        /dev/input/event15: 0000 0000 00000000
-
-        /dev/input/event15: 0003 0035 000001d0
-        /dev/input/event15: 0003 0036 00000320
-        /dev/input/event15: 0003 0030 00000009
-        /dev/input/event15: 0003 003a 00000009
-        /dev/input/event15: 0000 0000 00000000
-
-        /dev/input/event15: 0003 0035 00000156
-        /dev/input/event15: 0003 0036 000003ae
-        /dev/input/event15: 0003 0030 00000008
-        /dev/input/event15: 0003 003a 00000008
-        /dev/input/event15: 0000 0000 00000000
-
-        /dev/input/event15: 0003 0036 000003ba
-        /dev/input/event15: 0003 0030 0000000b
-        /dev/input/event15: 0003 003a 0000000b
-        /dev/input/event15: 0000 0000 00000000
-
         /dev/input/event15: 0003 0039 ffffffff
         /dev/input/event15: 0000 0000 00000000
         /dev/input/event15: 0001 014a 00000000
@@ -233,4 +216,5 @@ if __name__ == '__main__':
 
         res = res + "adb shell sendevent " + " ".join(ln) + " && \\\n"
 
-    x = Env.EIS
+    print(res)
+    x = Env.ENV
