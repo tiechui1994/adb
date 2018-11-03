@@ -184,6 +184,12 @@ class _Env(object):
         self.get_eis("")
 
     def get_eis(self, event, count=100, message="") -> list:
+        """
+        获取事件指令集合
+        :param event: 过滤的事件名称
+        :param count: 收集的最多指令数量
+        :param message: 提示信息
+        """
         try:
             print(message)
             eis_bytes = adb.run('shell getevent -l -c {count} | grep {event}'.
@@ -211,6 +217,13 @@ class _Env(object):
                 self.get_eis(event, count, message)
         except Exception:
             pass
+
+    def parse_eis(self, eis):
+        """
+        解析指令集合, 最终要生成一个事件的指令集合
+        :param eis: 原始指令集合
+        """
+        pass
 
 
 Env = _Env()
