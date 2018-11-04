@@ -62,8 +62,6 @@ __EIS__ = {}
 
 
 class _Env(object):
-    __slot__ = ["ENV", "EIS"]
-
     @property
     def ENV(self) -> dict:
         if not hasattr(_Env, '__ENV__'):
@@ -284,27 +282,28 @@ class _Env(object):
         思路: 拆块, 分析, 获取
         :param eis: 原始指令集合
         """
-        start = set()
-        end = set()
-        middle = set()
+        start, end, middle = [], [], []
         is_start, is_end, is_middle = True, False, False
         for es in eis:
             es = re.subn("^/dev.*:\s+", "", es, 1)[0]
-            if is_start:
-                start.add(es)
-
-            if is_middle:
-                middle.add(es)
-
-            if is_end:
-                end.add(es)
-
             if es.count("ABS_MT_POSITION_X"):
                 is_start = False
                 is_middle = True
 
-            if es.count("ABS_MT_POSITION_X") and es.count("ffffffff"):
-                is_end = False
+            if es.count("ABS_MT_TRACKING_ID") and es.count("ffffffff"):
+                is_end = True
+                is_middle = False
+
+            if is_start:
+                start.append(es)
+
+            if is_middle:
+                middle.append(es)
+
+            if is_end:
+                end.append(es)
+
+        return start, middle, end
 
     @staticmethod
     def validate():
@@ -371,4 +370,18 @@ if __name__ == '__main__':
 
     g = Env.split_eis(s)
     for i in range(0, len(g)):
-        print(i, g[i])
+        s, m, e = Env.parse_group_eis(g[i])
+        for j in s:
+            print(j)
+
+        print()
+
+        for j in m:
+            print(j)
+
+        print()
+
+        for j in e:
+            print(j)
+
+        print("\n=======================\n")
