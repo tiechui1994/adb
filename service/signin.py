@@ -22,7 +22,7 @@ def schedule_job():
 
     # 截图, 进行判断
     time.sleep(5)
-    screenshot.check_screenshot()
+    screenshot.pull_screenshot()
 
     # 签到
     adb.run("shell input swipe 200 1722 800 1722 1000")
