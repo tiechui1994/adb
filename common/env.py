@@ -62,6 +62,8 @@ __EIS__ = {}
 
 
 class _Env(object):
+    __slot__ = ["ENV", "EIS"]
+
     @property
     def ENV(self) -> dict:
         if not hasattr(_Env, '__ENV__'):
@@ -78,8 +80,8 @@ class _Env(object):
 
     def reload_env(self):
         global __ENV__
-        device_values = self.get_all_device()
-        device_labels = self.get_all_device(is_label=True)
+        device_values = self.get_all_input_device()
+        device_labels = self.get_all_input_device(is_label=True)
         for index in range(0, len(device_labels)):
             device_value = dict(device_values[index])
             device_label = dict(device_labels[index])
@@ -95,8 +97,16 @@ class _Env(object):
 
         print(__ENV__["DEVICE"])
 
+    def reload_eis(self):
+        """
+        一条完整的指令: 准备 -> 动作 -> 结束
+        """
+        device_name = adb.get_device_info()
+        print(device_name)
+        self.get_eis("")
+
     @staticmethod
-    def get_all_device(is_label=False) -> list:
+    def get_all_input_device(is_label=False) -> list:
         """
         device detail:
         {
@@ -176,16 +186,48 @@ class _Env(object):
 
         return devices
 
-    def reload_eis(self):
+    def get_eis(self, event, time=5, count=100, message="") -> list:
         """
-        一条完整的指令: 准备 -> 动作 -> 结束
+        获取事件指令集合
+        :param event: 过滤的事件名称
+        :param time: 基于时间获取指令
+        :param count: 基于数量获取指令
+        :param message: 提示信息
         """
-        device_name = adb.get_device_info()
-        print(device_name)
-        self.get_eis("")
+        try:
+            print(message)
+            eis_bytes = self.run_eis_script(pattern=event, time=time, count=count)
+
+            re_first = re.compile(r"^/dev/input/event.*")
+            re_last_1 = re.compile(r".*EV_ABS\s+ABS_MT_TRACKING_ID\s+ffffffff$")
+            re_last_2 = re.compile(r".*EV_SYN\s+SYN_REPORT\s+00000000$")
+
+            all_eis = str(eis_bytes).split("\n")
+            first, last_1, last_2, length = 0, 0, 0, len(all_eis)
+            for index in range(0, length):
+                f = all_eis[index].strip(" ")
+                l = all_eis[length - index - 1].strip()
+                if first == 0 and re_first.match(f):
+                    first = index
+
+                # last_1 和 last_2 相距很近, 先确定last_2, 然后查找last_1, 二者一旦确定将不会再改变
+                if last_1 == 0 and re_last_2.match(l):
+                    last_2 = length - index
+
+                if last_2 != 0 and last_1 == 0 and re_last_1.match(l):
+                    last_1 = length - index
+
+                all_eis[index] = f
+
+            if last_2 != 0 and first != 0:
+                return all_eis[first:last_2]
+            else:
+                self.get_eis(event, time, count, message)
+        except Exception:
+            pass
 
     @staticmethod
-    def get_eis_from_device(pattern, time=5, count=100):
+    def run_eis_script(pattern, time=5, count=100):
         """
         获取指令, 6.0(包括6.0)以上的可以基于指令次数进行获取, 以下的版本只能基于时间进行获取
         :param pattern: 过滤的事件
@@ -233,50 +275,10 @@ class _Env(object):
         command = command.replace("PATTERN", pattern).replace("TIME", str(time)).replace("COUNT", str(count))
         process = os.popen("{} shell '{}'".format(adb.adb_path, command))
         output = process.read()
-        print(output)
         return output
 
-    def get_eis(self, event, time=5, count=100, message="") -> list:
-        """
-        获取事件指令集合
-        :param event: 过滤的事件名称
-        :param time: 基于时间获取指令
-        :param count: 基于数量获取指令
-        :param message: 提示信息
-        """
-        try:
-            print(message)
-            eis_bytes = self.get_eis_from_device(pattern=event, time=time, count=count)
-
-            re_first = re.compile(r"^/dev/input/event.*")
-            re_last_1 = re.compile(r".*EV_ABS\s+ABS_MT_TRACKING_ID\s+ffffffff$")
-            re_last_2 = re.compile(r".*EV_SYN\s+SYN_REPORT\s+00000000$")
-
-            all_eis = str(eis_bytes).split("\n")
-            first, last_1, last_2, length = 0, 0, 0, len(all_eis)
-            for index in range(0, length):
-                f = all_eis[index].strip(" ")
-                l = all_eis[length - index - 1].strip()
-                if first == 0 and re_first.match(f):
-                    first = index
-
-                # last_1 和 last_2 相距很近, 先确定last_2, 然后查找last_1, 二者一旦确定将不会再改变
-                if last_1 == 0 and re_last_2.match(l):
-                    last_2 = length - index
-
-                if last_2 != 0 and last_1 == 0 and re_last_1.match(l):
-                    last_1 = length - index
-
-                all_eis[index] = f
-
-            if last_2 != 0 and first != 0:
-                return all_eis[first:last_2]
-            else:
-                self.get_eis(event, time, count, message)
-        except Exception:
-            pass
-
-    def parse_eis(self, eis):
+    @staticmethod
+    def parse_group_eis(eis):
         """
         解析指令集合, 最终要生成一个事件的指令集合
         思路: 拆块, 分析, 获取
@@ -303,6 +305,35 @@ class _Env(object):
 
             if es.count("ABS_MT_POSITION_X") and es.count("ffffffff"):
                 is_end = False
+
+    @staticmethod
+    def validate():
+        pass
+
+    @staticmethod
+    def split_eis(eis: list) -> list:
+        """
+        对已有的大eis进行切块处理
+        """
+        re_last_1 = re.compile(r".*EV_ABS\s+ABS_MT_TRACKING_ID\s+ffffffff$")
+        re_last_2 = re.compile(r".*EV_SYN\s+SYN_REPORT\s+00000000$")
+
+        eis_group = []
+        length = len(eis)
+        first, last_1, last_2 = 0, 0, 0
+        for index in range(0, length):
+            cur = eis[index]
+            if last_2 == 0 and re_last_1.match(cur):
+                last_1 = index
+
+            if last_1 != 0 and last_2 == 0 and re_last_2.match(cur):
+                last_2 = index
+                if index + 1 <= length:
+                    eis_group.append(eis[first:last_2 + 1])
+                    first = last_2 + 1
+                    last_1, last_2 = 0, 0
+
+        return eis_group
 
 
 Env = _Env()
@@ -337,5 +368,7 @@ if __name__ == '__main__':
         res = res + "adb shell sendevent " + " ".join(ln) + " && \\\n"
 
     s = Env.get_eis('event2', time=10, count=100, message="请点击:")
-    for i in range(0, len(s)):
-        print(i, s[i])
+
+    g = Env.split_eis(s)
+    for i in range(0, len(g)):
+        print(i, g[i])
