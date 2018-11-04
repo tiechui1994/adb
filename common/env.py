@@ -1,6 +1,7 @@
 """
 指令表
 """
+import os
 import re
 from collections import OrderedDict
 from io import StringIO
@@ -183,47 +184,125 @@ class _Env(object):
         print(device_name)
         self.get_eis("")
 
-    def get_eis(self, event, count=100, message="") -> list:
+    @staticmethod
+    def get_eis_from_device(pattern, time=5, count=100):
+        """
+        获取指令, 6.0(包括6.0)以上的可以基于指令次数进行获取, 以下的版本只能基于时间进行获取
+        :param pattern: 过滤的事件
+        :param time: 基于时间的统计 (需要多次触发, 单次触发可能没有结果输出)
+        :param count: 基于指令次数的统计
+        :return:
+        """
+        command = """
+        count=0
+        wc=0
+        if $(command -v wc > /dev/null 2>&1); then
+            wc=1
+        fi
+
+        if [ ${wc} -eq 1 ]; then
+            rm -rf /sdcard/event.txt
+            getevent -l|grep PATTERN > /sdcard/event.txt &
+        else
+            getevent -l|grep PATTERN &
+        fi
+
+        pid=$(set `ps |grep -E '^shell.*getevent$'` && echo $2)
+        while true
+        do
+            if [ ${wc} -eq 0 ]; then
+                let count=count+1
+            fi
+
+            sleep 1
+
+            if [ ${wc} -eq 1 ]; then
+                if [ ${wc} -a $(cat /sdcard/event.txt|wc -l) -gt COUNT ]; then
+                    kill -9 ${pid}
+                    cat /sdcard/event.txt
+                    break
+                fi
+            else
+                if [ ${count} -ge TIME ]; then
+                    kill -9 ${pid}
+                    break
+                fi
+            fi
+        done
+        """
+        command = command.replace("PATTERN", pattern).replace("TIME", str(time)).replace("COUNT", str(count))
+        process = os.popen("{} shell '{}'".format(adb.adb_path, command))
+        output = process.read()
+        print(output)
+        return output
+
+    def get_eis(self, event, time=5, count=100, message="") -> list:
         """
         获取事件指令集合
         :param event: 过滤的事件名称
-        :param count: 收集的最多指令数量
+        :param time: 基于时间获取指令
+        :param count: 基于数量获取指令
         :param message: 提示信息
         """
         try:
             print(message)
-            eis_bytes = adb.run('shell getevent -l -c {count} | grep {event}'.
-                                format(count=count, event=event))
+            eis_bytes = self.get_eis_from_device(pattern=event, time=time, count=count)
 
             re_first = re.compile(r"^/dev/input/event.*")
-            re_last = re.compile(r".*EV_ABS\s+ABS_MT_TRACKING_ID\s+ffffffff$")
+            re_last_1 = re.compile(r".*EV_ABS\s+ABS_MT_TRACKING_ID\s+ffffffff$")
+            re_last_2 = re.compile(r".*EV_SYN\s+SYN_REPORT\s+00000000$")
 
             all_eis = str(eis_bytes).split("\n")
-            first, last, length = 0, 0, len(all_eis)
+            first, last_1, last_2, length = 0, 0, 0, len(all_eis)
             for index in range(0, length):
                 f = all_eis[index].strip(" ")
                 l = all_eis[length - index - 1].strip()
-                if first is 0 and re_first.match(f):
-                    first = index + 1
+                if first == 0 and re_first.match(f):
+                    first = index
 
-                if last is 0 and re_last.match(l):
-                    last = length - index
+                # last_1 和 last_2 相距很近, 先确定last_2, 然后查找last_1, 二者一旦确定将不会再改变
+                if last_1 == 0 and re_last_2.match(l):
+                    last_2 = length - index
+
+                if last_2 != 0 and last_1 == 0 and re_last_1.match(l):
+                    last_1 = length - index
 
                 all_eis[index] = f
 
-            if last != 0 and first != 0:
-                return all_eis[first:last]
+            if last_2 != 0 and first != 0:
+                return all_eis[first:last_2]
             else:
-                self.get_eis(event, count, message)
+                self.get_eis(event, time, count, message)
         except Exception:
             pass
 
     def parse_eis(self, eis):
         """
         解析指令集合, 最终要生成一个事件的指令集合
+        思路: 拆块, 分析, 获取
         :param eis: 原始指令集合
         """
-        pass
+        start = set()
+        end = set()
+        middle = set()
+        is_start, is_end, is_middle = True, False, False
+        for es in eis:
+            es = re.subn("^/dev.*:\s+", "", es, 1)[0]
+            if is_start:
+                start.add(es)
+
+            if is_middle:
+                middle.add(es)
+
+            if is_end:
+                end.add(es)
+
+            if es.count("ABS_MT_POSITION_X"):
+                is_start = False
+                is_middle = True
+
+            if es.count("ABS_MT_POSITION_X") and es.count("ffffffff"):
+                is_end = False
 
 
 Env = _Env()
@@ -257,4 +336,6 @@ if __name__ == '__main__':
 
         res = res + "adb shell sendevent " + " ".join(ln) + " && \\\n"
 
-    Env.get_eis('event2', count=40, message="请点击:")
+    s = Env.get_eis('event2', time=10, count=100, message="请点击:")
+    for i in range(0, len(s)):
+        print(i, s[i])
