@@ -39,7 +39,7 @@ def schedule_job():
 def execute():
     try:
         schedule.every().day.at("08:05").do(schedule_job)
-        schedule.every().day.at("19:10").do(schedule_job)
+        # schedule.every().day.at("19:10").do(schedule_job)
 
         while True:
             schedule.run_pending()
@@ -49,4 +49,4 @@ def execute():
 
 
 if __name__ == '__main__':
-    schedule_job()
+    execute()

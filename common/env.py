@@ -127,7 +127,7 @@ class _Env(object):
         read_event, read_input, event_name, devices, device = False, False, "", [], OrderedDict()
         line = reader.readline()
         while len(line) > 0:
-            line = line.replace("\n", "").lstrip().rstrip()
+            line = line.replace("\n", "").strip()
             if line.count("device"):
                 if device:
                     devices.append(device)
@@ -152,7 +152,7 @@ class _Env(object):
 
             if read_event:
                 fileds = colon_sep.split(line)
-                if line.count("value") > 0:
+                if line.count("value"):
                     fileds = fileds[0:-1]
 
                 if len(fileds) == 2:
@@ -203,7 +203,7 @@ class _Env(object):
             all_eis = str(eis_bytes).split("\n")
             first, last_1, last_2, length = 0, 0, 0, len(all_eis)
             for index in range(0, length):
-                f = all_eis[index].strip(" ")
+                f = all_eis[index].strip()
                 l = all_eis[length - index - 1].strip()
                 if first == 0 and re_first.match(f):
                     first = index
