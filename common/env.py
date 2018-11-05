@@ -6,6 +6,8 @@ import re
 from collections import OrderedDict
 from io import StringIO
 
+from copy import deepcopy
+
 from common.adb import Adb
 
 adb = Adb()
@@ -101,7 +103,7 @@ class _Env(object):
         """
         device_name = adb.get_device_info()
         print(device_name)
-        self.get_eis("")
+        self.get_origin_eis("")
 
     @staticmethod
     def get_all_input_device(is_label=False) -> list:
@@ -184,9 +186,9 @@ class _Env(object):
 
         return devices
 
-    def get_eis(self, event, time=5, count=100, message="") -> list:
+    def get_origin_eis(self, event, time=5, count=100, message="") -> list:
         """
-        获取事件指令集合
+        获取事件指令集合(指令已经被切分)
         :param event: 过滤的事件名称
         :param time: 基于时间获取指令
         :param count: 基于数量获取指令
@@ -194,7 +196,7 @@ class _Env(object):
         """
         try:
             print(message)
-            eis_bytes = self.run_eis_script(pattern=event, time=time, count=count)
+            eis_bytes = self._get_origin_eis(pattern=event, time=time, count=count)
 
             re_first = re.compile(r"^/dev/input/event.*")
             re_last_1 = re.compile(r".*EV_ABS\s+ABS_MT_TRACKING_ID\s+ffffffff$")
@@ -220,12 +222,12 @@ class _Env(object):
             if last_2 != 0 and first != 0:
                 return all_eis[first:last_2]
             else:
-                self.get_eis(event, time, count, message)
+                self.get_origin_eis(event, time, count, message)
         except Exception:
             pass
 
     @staticmethod
-    def run_eis_script(pattern, time=5, count=100):
+    def _get_origin_eis(pattern, time=5, count=100):
         """
         获取指令, 6.0(包括6.0)以上的可以基于指令次数进行获取, 以下的版本只能基于时间进行获取
         :param pattern: 过滤的事件
@@ -276,15 +278,40 @@ class _Env(object):
         return output
 
     @staticmethod
-    def parse_group_eis(eis):
+    def split(origin_eis: list) -> list:
         """
-        解析指令集合, 最终要生成一个事件的指令集合
-        思路: 拆块, 分析, 获取
-        :param eis: 原始指令集合
+        将原始事件指令块切分成组, 每一个组包含一个命令的指令集合
+        :param origin_eis: 原始事件指令块(获取的原始的eis)
+        """
+        re_last_1 = re.compile(r".*EV_ABS\s+ABS_MT_TRACKING_ID\s+ffffffff$")
+        re_last_2 = re.compile(r".*EV_SYN\s+SYN_REPORT\s+00000000$")
+
+        eis_group = []
+        length = len(origin_eis)
+        first, last_1, last_2 = 0, 0, 0
+        for index in range(0, length):
+            cur = origin_eis[index]
+            if last_2 == 0 and re_last_1.match(cur):
+                last_1 = index
+
+            if last_1 != 0 and last_2 == 0 and re_last_2.match(cur):
+                last_2 = index
+                if index + 1 <= length:
+                    eis_group.append(origin_eis[first:last_2 + 1])
+                    first = last_2 + 1
+                    last_1, last_2 = 0, 0
+
+        return eis_group
+
+    @staticmethod
+    def parse_group_eis(group):
+        """
+        start, 命令开始; middle, 命令主题; end, 命令结尾
+        :param group: 一个原始的指令集合(切分后的组)
         """
         start, end, middle = [], [], []
         is_start, is_end, is_middle = True, False, False
-        for es in eis:
+        for es in group:
             es = re.subn("^/dev.*:\s+", "", es, 1)[0]
             if es.count("ABS_MT_POSITION_X"):
                 is_start = False
@@ -306,33 +333,34 @@ class _Env(object):
         return start, middle, end
 
     @staticmethod
-    def validate():
-        pass
+    def generate_command_template(all_group: list) -> tuple:
+        """
+        :param all_group: 所有已经解析过group
+        """
+        start, middle, end = [], [], []
+        for group in all_group:
+            s = group[0]
+            m = group[1]
+            e = group[2]
+
+            if not start and not middle and not end:
+                start, middle, end = deepcopy(s), deepcopy(m), deepcopy(e)
+
+            # 处理:1.传递自定义函数 2.统一集中处理
+            for i in s:
+                pass
+
+            for i in m:
+                pass
+
+            for i in e:
+                pass
+
+        return start, middle, end
 
     @staticmethod
-    def split_eis(eis: list) -> list:
-        """
-        对已有的大eis进行切块处理
-        """
-        re_last_1 = re.compile(r".*EV_ABS\s+ABS_MT_TRACKING_ID\s+ffffffff$")
-        re_last_2 = re.compile(r".*EV_SYN\s+SYN_REPORT\s+00000000$")
-
-        eis_group = []
-        length = len(eis)
-        first, last_1, last_2 = 0, 0, 0
-        for index in range(0, length):
-            cur = eis[index]
-            if last_2 == 0 and re_last_1.match(cur):
-                last_1 = index
-
-            if last_1 != 0 and last_2 == 0 and re_last_2.match(cur):
-                last_2 = index
-                if index + 1 <= length:
-                    eis_group.append(eis[first:last_2 + 1])
-                    first = last_2 + 1
-                    last_1, last_2 = 0, 0
-
-        return eis_group
+    def validate():
+        pass
 
 
 Env = _Env()
@@ -357,18 +385,18 @@ if __name__ == '__main__':
     strs = strs.split("\n")
     res = ""
     for s in strs:
-        if len(s.replace(":", "").lstrip(" ")) == 0:
+        if len(s.replace(":", "").lstrip()) == 0:
             continue
-        ln = s.replace(":", "").lstrip(" ").split(" ")
+        ln = s.replace(":", "").lstrip().split(" ")
         ln[1] = str(int('0x' + ln[1], 16))
         ln[2] = str(int('0x' + ln[2], 16))
         ln[3] = str(int('0x' + ln[3], 16))
 
         res = res + "adb shell sendevent " + " ".join(ln) + " && \\\n"
 
-    s = Env.get_eis('event2', time=10, count=100, message="请点击:")
+    s = Env.get_origin_eis('event2', time=10, count=100, message="请点击:")
 
-    g = Env.split_eis(s)
+    g = Env.split(s)
     for i in range(0, len(g)):
         s, m, e = Env.parse_group_eis(g[i])
         for j in s:
