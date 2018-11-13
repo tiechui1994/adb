@@ -2,6 +2,7 @@ import os
 import subprocess
 
 import re
+from io import StringIO
 
 """
 针对Linux操作系统
@@ -54,6 +55,32 @@ class Adb(object):
             'model': info[4]
         }
 
+    def get_network_info(self) -> list:
+        byte = self.run("shell ip address")
+        reader = StringIO(byte)
+
+        re_eth = re.compile("^[0-9]+:\s(\w+):")
+        re_ip = re.compile("^inet\s([0-9.]{7,15})/")
+        re_mac = re.compile("^link/(ether|loopback)\s([0-9a-f:]{17})")
+        network, info = list(), dict()
+        line = reader.readline()
+        while line:
+            line = line.replace("\n", "").strip()
+            if re_eth.match(line):
+                info["eth"] = re_eth.findall(line)[0]
+
+            if re_mac.match(line):
+                info["mac"] = re_mac.findall(line)[0][1]
+
+            if re_ip.match(line):
+                info["ip"] = re_ip.findall(line)[0]
+                network.append(info)
+                info = dict()
+
+            line = reader.readline()
+
+        return network
+
     def run(self, raw_command):
         command = '{} {}'.format(self.adb_path, raw_command)
         process = os.popen(command)
@@ -83,3 +110,8 @@ class Adb(object):
         print('adb 输出:')
         for each in output:
             print(each.decode('utf8'))
+
+
+if __name__ == '__main__':
+    adb = Adb()
+    adb.get_network_info()
