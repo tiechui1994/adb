@@ -22,7 +22,7 @@ def schedule_job():
         adb.run("shell am start -n {}".format(APP_MAIN))
 
     # 截图, 进行判断
-    random_sleep_time = random.randint(30, 1200)
+    random_sleep_time = random.randint(10, 1800)
     time.sleep(random_sleep_time)
     screenshot.pull_screenshot()
 
@@ -40,7 +40,7 @@ def schedule_job():
 
 def execute():
     try:
-        schedule.every().day.at("08:05").do(schedule_job)
+        schedule.every().day.at("08:20").do(schedule_job)
         # schedule.every().day.at("19:10").do(schedule_job)
 
         while True:
