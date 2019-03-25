@@ -6,6 +6,7 @@ from common.adb import Adb
 from common.screenlock import Screen
 
 APP_MAIN = "com.facishare.fs/com.facishare.fs.biz_function.subbiz_attendance_new.AttendanceActivity"
+picture_path = "/home/user/Desktop/autojump.png"
 
 
 def schedule_job():
@@ -22,14 +23,14 @@ def schedule_job():
     # 截图, 进行判断
     random_sleep_time = random.randint(5, 20)
     time.sleep(random_sleep_time)
-    screenshot.pull_screenshot()
+    screenshot.pull_screenshot(picturepath=picture_path)
 
     # 签到
     adb.run("shell input swipe 200 1722 800 1722 1000")
 
     # 截图,判断
     time.sleep(5)
-    screenshot.pull_screenshot()
+    screenshot.pull_screenshot(picturepath=picture_path)
 
     # 应用退出
     adb.run("shell am force-stop com.facishare.fs")
