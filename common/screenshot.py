@@ -45,7 +45,7 @@ def _pull_screenshot(picturepath):
     elif SCREENSHOT_WAY == 0:
         _, filename = os.path.split(picturepath)
         adb.run('shell screencap -p /sdcard/{filename}'.format(filename=filename))
-        adb.run('pull /sdcard/{filename} {path}'.format(filename=picturepath, path=picturepath))
+        adb.run('pull /sdcard/{filename} {path}'.format(filename=filename, path=picturepath))
         return Image.open('{path}'.format(path=picturepath))
 
 

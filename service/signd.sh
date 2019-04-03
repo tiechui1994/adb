@@ -2,8 +2,8 @@
 
 ### BEGIN INIT INFO
 # Provides:          signd
-# Required-Start:    $local_fs
-# Required-Stop:     $local_fs
+# Required-Start:    $all
+# Required-Stop:
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
 # Short-Description: signd service
@@ -45,4 +45,3 @@ case "$1" in
         echo "Please use start or stop as first argument"
         ;;
 esac
-

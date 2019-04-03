@@ -3,3 +3,4 @@ numpy
 scipy
 opencv-python
 schedule
+urllib3
