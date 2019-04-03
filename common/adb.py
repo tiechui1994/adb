@@ -56,7 +56,7 @@ class Adb(object):
         }
 
     def get_network_info(self) -> list:
-        byte = self.run("shell ip address")
+        byte = self.run("shell ip addr")
         reader = StringIO(byte)
 
         re_eth = re.compile("^[0-9]+:\s(\w+):")
@@ -114,4 +114,4 @@ class Adb(object):
 
 if __name__ == '__main__':
     adb = Adb()
-    adb.get_network_info()
+    print(adb.get_network_info())
