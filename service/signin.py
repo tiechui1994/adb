@@ -6,7 +6,6 @@ import sys
 import urllib3
 from datetime import date
 
-
 from common import screenshot
 from common.adb import Adb
 from common.screenlock import Screen
@@ -76,13 +75,9 @@ def check_date_rest():
         return True
 
 
-def do():
-    print(time.ctime())
-
-
 def execute():
-    init()
     try:
+        init()
         schedule.every().day.at("08:10").do(schedule_job)
         schedule.every().day.at("20:10").do(schedule_job)
 
