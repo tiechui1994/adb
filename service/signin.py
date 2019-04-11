@@ -23,12 +23,25 @@ def init():
     manager = urllib3.PoolManager(num_pools=5)
 
 
+def check_network():
+    global adb
+    flag = False
+    for net in adb.get_network_info():
+        if net["eth"] == "wlan0":
+            flag = True
+    if not flag:
+        adb.run("reboot")
+
+
 def schedule_job():
     global adb
 
     # 判断
     if check_date_rest():
         return
+
+    # 检查网络
+    check_network()
 
     # 解锁
     Screen.unlock_screen()

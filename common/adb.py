@@ -113,5 +113,4 @@ class Adb(object):
 
 
 if __name__ == '__main__':
-    adb = Adb()
-    print(adb.get_network_info())
+    data = {'mac': '48:6b:2c:c2:e2:c0', 'eth': 'wlan0'}
