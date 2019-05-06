@@ -52,7 +52,7 @@ def schedule_job():
         adb.run("shell am start -n {}".format(APP_MAIN))
 
     # 截图, 进行判断
-    random_sleep_time = random.randint(10, 1000)
+    random_sleep_time = random.randint(20, 1200)
     time.sleep(random_sleep_time)
     screenshot.pull_screenshot(picturepath=picture_path)
 
@@ -60,7 +60,7 @@ def schedule_job():
     adb.run("shell input swipe 200 1722 800 1722 1000")
 
     # 截图,判断
-    time.sleep(5)
+    time.sleep(10)
     screenshot.pull_screenshot(picturepath=picture_path)
 
     # 应用退出
