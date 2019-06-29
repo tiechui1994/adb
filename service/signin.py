@@ -52,7 +52,7 @@ def schedule_job():
         adb.run("shell am start -n {}".format(APP_MAIN))
 
     # 截图, 进行判断
-    random_sleep_time = random.randint(20, 1200)
+    random_sleep_time = random.randint(100, 2400)
     time.sleep(random_sleep_time)
     screenshot.pull_screenshot(picturepath=picture_path)
 
@@ -91,8 +91,8 @@ def check_date_rest():
 def execute():
     try:
         init()
-        schedule.every().day.at("08:10").do(schedule_job)
-        schedule.every().day.at("20:10").do(schedule_job)
+        schedule.every().day.at("08:20").do(schedule_job)
+        schedule.every().day.at("20:30").do(schedule_job)
 
         while True:
             schedule.run_pending()
